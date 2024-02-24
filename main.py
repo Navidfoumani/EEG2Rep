@@ -23,7 +23,7 @@ parser.add_argument('--val_ratio', type=float, default=0.2, help="Proportion of 
 parser.add_argument('--print_interval', type=int, default=10, help='Print batch info every this many batches')
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------- Parameters and Hyperparameter ----------------------------------------------
-parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')
+parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
 parser.add_argument('--batch_size', type=int, default=128, help='Training batch size')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.1, help='Dropout regularization ratio')

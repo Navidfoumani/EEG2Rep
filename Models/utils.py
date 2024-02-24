@@ -157,3 +157,13 @@ def count_parameters(model, trainable=False):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
     else:
         return sum(p.numel() for p in model.parameters())
+
+
+def readable_time(time_difference):
+    """Convert a float measuring time difference in seconds into a tuple of (hours, minutes, seconds)"""
+
+    hours = time_difference // 3600
+    minutes = (time_difference // 60) % 60
+    seconds = time_difference % 60
+
+    return hours, minutes, seconds

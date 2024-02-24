@@ -30,7 +30,7 @@ parser.add_argument('--dropout', type=float, default=0.1, help='Dropout regulari
 parser.add_argument('--val_interval', type=int, default=2, help='Evaluate on validation every XX epochs. Must be >= 1')
 parser.add_argument('--key_metric', choices={'loss', 'accuracy'}, default='loss', help='Metric used for best epoch')
 # -------------------------------------------------- EEG2Rep ----------------------------------------------------------
-parser.add_argument('--Training_mode', default='Supervised', choices={'Rep-Learning', 'Initialization', 'Supervised'})
+parser.add_argument('--Training_mode', default='Rep-Learning', choices={'Rep-Learning', 'Initialization', 'Supervised'})
 parser.add_argument('--Input_Embedding', default=['C'], choices={'T', 'C', 'C-T'}, help="Input Embedding Architecture")
 parser.add_argument('--Pos_Embedding', default=['Sin'], choices={'Sin', 'Emb'}, help="Position Embedding Architecture")
 

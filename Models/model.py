@@ -1,7 +1,9 @@
+import copy
 import random
 import numpy as np
 import torch
 from torch import nn
+import torch.nn.functional as F
 from Models.AbsolutePositionalEncoding import SinPositionalEncoding, APE2D, LPE2D
 from Models.AbsolutePositionalEncoding import tAPE, AbsolutePositionalEncoding, LearnablePositionalEncoding
 from Models.Attention import *
@@ -22,6 +24,7 @@ def Encoder_factory(config):
         # model = EEG_JEPA(config, num_classes=config['num_labels'])
         model = Conv_EEG_JEPA(config, num_classes=config['num_labels'])
     else:
+        # model = Conv_EEG_JEPA(config, num_classes=config['num_labels'])
         model = EEG_JEPA_Sup(config, num_classes=config['num_labels'])
         # model = ConvTran(config, num_classes=config['num_labels'])
         # model = MyModel(config, num_classes=config['num_labels'])
@@ -34,7 +37,8 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         d_model = config['emb_size']
         attn_heads = config['num_heads']
-        d_ffn = 4 * d_model
+        # d_ffn = 4 * d_model
+        d_ffn = config['dim_ff']
         layers = config['layers']
         dropout = config['dropout']
         enable_res_parameter = True
@@ -46,6 +50,32 @@ class Encoder(nn.Module):
         for TRM in self.TRMs:
             x = TRM(x, mask=None)
         return x
+
+
+class Target_Encoder(nn.Module):
+    def __init__(self, config):
+        super(Target_Encoder, self).__init__()
+        d_model = config['emb_size']
+        attn_heads = config['num_heads']
+        # d_ffn = 4 * d_model
+        d_ffn = config['dim_ff']
+        layers = config['layers']
+        dropout = config['dropout']
+        enable_res_parameter = True
+        # TRMs
+        self.TRMs = nn.ModuleList(
+            [TransformerBlock(d_model, attn_heads, d_ffn, enable_res_parameter, dropout) for i in range(layers)])
+
+    def forward(self, x):
+        layer_outputs = []
+        for TRM in self.TRMs:
+            x = TRM(x, mask=None)
+            layer_outputs.append(x.clone())
+
+        # Return the average of the last three layer outputs
+        avg_last_3_layers = [F.instance_norm(tl.float()) for tl in layer_outputs]
+        avg_last_3_layers = sum(avg_last_3_layers) / len(avg_last_3_layers)
+        return avg_last_3_layers
 
 
 class EEG_JEPA(nn.Module):
@@ -145,29 +175,32 @@ class Conv_EEG_JEPA(nn.Module):
         # Parameters Initialization -----------------------------------------------
         channel_size, seq_len = config['Data_shape'][1], config['Data_shape'][2]
         emb_size = config['emb_size']
-        k = 40
-        m = 5
-        # Embedding Layer -----------------------------------------------------------
-        self.depthwise_conv = nn.Conv2d(in_channels=1, out_channels=emb_size, kernel_size=(channel_size, 1))
-        self.spatial_padding = nn.ReflectionPad2d((int(np.floor((k - 1) / 2)), int(np.ceil((k - 1) / 2)), 0, 0))
-        self.spatialwise_conv1 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(1, k))
-        self.spatialwise_conv2 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(1, k))
-        self.SiLU = nn.SiLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=(1, m), stride=(1, m))
 
-        self.SinPositionalEncoding = PositionalEmbedding(int(seq_len / m), emb_size)
+        # Embedding Layer -----------------------------------------------------------
+        m = 5
+        seq_len = int(seq_len / m)
+        self.PatchEmbedding = PatchEmbedding(config)
+
+        # seq_len = int(seq_len/config['patch_size'])
+        # self.PatchEmbedding = InputProjection(config)
+
+        self.PositionalEncoding = PositionalEmbedding(seq_len, emb_size)
+
+        # -------------------------------------------------------------------------
 
         self.momentum = config['momentum']
         self.linear_proba = True
         self.device = config['device']
-
-        self.mask_len = int(config['mask_ratio'] * int(seq_len / m))
+        self.mask_ratio = config['mask_ratio']
+        self.mask_len = int(config['mask_ratio'] * seq_len)
         self.mask_token = nn.Parameter(torch.randn(emb_size, ))
         self.contex_encoder = Encoder(config)
-        self.target_encoder = Encoder(config)
+        self.target_encoder = copy.deepcopy(self.contex_encoder)
+        # self.target_encoder = Target_Encoder(config)
         self.Predictor = Predictor(emb_size, config['num_heads'], config['dim_ff'], 1, config['pre_layers'])
         self.predict_head = nn.Linear(emb_size, config['num_labels'])
 
+        self.gap = nn.AdaptiveAvgPool1d(1)
 
     def copy_weight(self):
         with torch.no_grad():
@@ -180,45 +213,35 @@ class Conv_EEG_JEPA(nn.Module):
                 param_b.data = self.momentum * param_b.data + (1 - self.momentum) * param_a.data
 
     def linear_prob(self, x):
-        with torch.no_grad():
-            out = x.unsqueeze(1)
-            out = self.depthwise_conv(out)  # (bs, embedding, 1 , T)
-            out = out.permute(0, 2, 1, 3)  # (bs, 1, embedding, T)
-            out = self.spatial_padding(out)
-            out = self.spatialwise_conv1(out)  # (bs, 1, embedding, T)
-            out = self.SiLU(out)
-            out = self.maxpool(out)  # (bs, 1, embedding, T // m)
-            out = self.spatial_padding(out)
-            out = self.spatialwise_conv2(out)
-            out = out.squeeze(1)  # (bs, embedding, T // m)
-            out = out.permute(0, 2, 1)  # (bs, T // m, embedding)
-            patches = self.SiLU(out)
-            patches += self.SinPositionalEncoding(patches)
+        with (torch.no_grad()):
+
+            patches = self.PatchEmbedding(x)
+            patches += self.PositionalEncoding(patches)
             out = self.contex_encoder(patches)
-            return out
+            out = out.transpose(2, 1)
+            out = self.gap(out)
+            return out.squeeze()
 
     def pretrain_forward(self, x):
 
-        out = x.unsqueeze(1)
-        out = self.depthwise_conv(out)  # (bs, embedding, 1 , T)
-        out = out.permute(0, 2, 1, 3)  # (bs, 1, embedding, T)
-        out = self.spatial_padding(out)
-        out = self.spatialwise_conv1(out)  # (bs, 1, embedding, T)
-        out = self.SiLU(out)
-        out = self.maxpool(out)  # (bs, 1, embedding, T // m)
-        out = self.spatial_padding(out)
-        out = self.spatialwise_conv2(out)
-        out = out.squeeze(1)  # (bs, embedding, T // m)
-        out = out.permute(0, 2, 1)  # (bs, T // m, embedding)
-        patches = self.SiLU(out)
-        patches += self.SinPositionalEncoding(patches)
+        patches = self.PatchEmbedding(x)
+        patches += self.PositionalEncoding(patches)
 
-        rep_mask_token = self.mask_token.repeat(patches.shape[0], patches.shape[1], 1) + self.SinPositionalEncoding(patches)
+        rep_mask_token = self.mask_token.repeat(patches.shape[0], patches.shape[1], 1)
+        rep_mask_token = + self.PositionalEncoding(rep_mask_token)
 
         index = np.arange(patches.shape[1])
-        random.shuffle(index)
-        v_index = index[:-self.mask_len]
-        m_index = index[-self.mask_len:]
+        m_index_chunk = select_chunks_by_indices(index, chunk_count=2, target_percentage=self.mask_ratio)
+        m_index = np.ravel(m_index_chunk)
+        v_index = np.setdiff1d(index, m_index)
+
+        # v_index = np.sort(np.unique(np.concatenate(m_index_chunk)))
+        # m_index = np.setdiff1d(index, v_index)
+
+        # random.shuffle(index)
+        # v_index = index[:-self.mask_len]
+        # m_index = index[-self.mask_len:]
+
         visible = patches[:, v_index, :]
         rep_mask_token = rep_mask_token[:, m_index, :]
         rep_contex = self.contex_encoder(visible)
@@ -229,22 +252,37 @@ class Conv_EEG_JEPA(nn.Module):
         return [rep_mask, rep_mask_prediction, rep_contex, rep_target]
 
     def forward(self, x):
-        out = x.unsqueeze(1)
-        out = self.depthwise_conv(out)  # (bs, embedding, 1 , T)
-        out = out.permute(0, 2, 1, 3)  # (bs, 1, embedding, T)
-        out = self.spatial_padding(out)
-        out = self.spatialwise_conv1(out)  # (bs, 1, embedding, T)
-        out = self.SiLU(out)
-        out = self.maxpool(out)  # (bs, 1, embedding, T // m)
-        out = self.spatial_padding(out)
-        out = self.spatialwise_conv2(out)
-        out = out.squeeze(1)  # (bs, embedding, T // m)
-        out = out.permute(0, 2, 1)  # (bs, T // m, embedding)
-        patches = self.SiLU(out)
 
-        patches += self.SinPositionalEncoding(patches)
+        patches = self.PatchEmbedding(x)
+        patches += self.PositionalEncoding(patches)
         out = self.contex_encoder(patches)
         return self.predict_head(torch.mean(out, dim=1))
+
+
+def select_chunks_by_indices(time_step_indices, chunk_count=2, target_percentage=0.5):
+    # Get the total number of time steps
+    total_time_steps = len(time_step_indices)
+
+    # Calculate the desired total time steps for the selected chunks
+    target_total_time_steps = int(total_time_steps * target_percentage)
+
+    # Calculate the size of each chunk
+    chunk_size = target_total_time_steps // chunk_count
+
+    # Calculate the minimum distance between starting points
+    min_starting_distance = chunk_size
+
+    # Randomly select starting points for each chunk with minimum distance
+    start_points = [random.randint(0, total_time_steps - chunk_size)]
+    # Randomly select starting points for each subsequent chunk with minimum distance
+    for _ in range(chunk_count - 1):
+        next_start_point = random.randint(0, total_time_steps - chunk_size)
+        start_points.append(next_start_point)
+
+    # Select non-overlapping chunks using indices
+    selected_chunks_indices = [time_step_indices[start:start + chunk_size] for start in start_points]
+
+    return selected_chunks_indices
 
 
 class EEG_JEPA_Sup(nn.Module):
@@ -257,51 +295,48 @@ class EEG_JEPA_Sup(nn.Module):
          m: maxpool size
         """
         # Parameters Initialization -----------------------------------------------
+        # Parameters Initialization -----------------------------------------------
         channel_size, seq_len = config['Data_shape'][1], config['Data_shape'][2]
         emb_size = config['emb_size']
-        patch_size = config['patch_size']
+
+        # Embedding Layer -----------------------------------------------------------
+        m = 5
+        seq_len = int(seq_len / m)
+        self.PatchEmbedding = PatchEmbedding(config)
+
+        self.SinPositionalEncoding = PositionalEmbedding(seq_len, emb_size)
+        self.contex_encoder = Encoder(config)
+        # self.predict_head = nn.Linear(emb_size*int(seq_len/m), config['num_labels'])
+        self.predict_head = nn.Linear(emb_size, config['num_labels'])
+
+    def forward(self, x):
+        patches = self.PatchEmbedding(x)
+        patches += self.SinPositionalEncoding(patches)
+        out = self.contex_encoder(patches)
+        return self.predict_head(torch.mean(out, dim=1))
+        # out = out.view(out.shape[0], -1)
+        # return self.predict_head(out)
+
+
+class PatchEmbedding(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        channel_size, seq_len = config['Data_shape'][1], config['Data_shape'][2]
+        emb_size = config['emb_size']
         k = 40
         m = 5
         # Embedding Layer -----------------------------------------------------------
-        self.Norm = nn.BatchNorm1d(channel_size)
         self.depthwise_conv = nn.Conv2d(in_channels=1, out_channels=emb_size, kernel_size=(channel_size, 1))
-
         self.spatial_padding = nn.ReflectionPad2d((int(np.floor((k - 1) / 2)), int(np.ceil((k - 1) / 2)), 0, 0))
         self.spatialwise_conv1 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(1, k))
         self.spatialwise_conv2 = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(1, k))
-
         self.SiLU = nn.SiLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=(1, m), stride=(1, m))
 
-
-
-        '''
-        self.embed_layer1 = nn.Sequential(nn.Conv2d(1, 16, kernel_size=[1, 3], padding='same'),
-                                          nn.BatchNorm2d(16),
-                                          nn.GELU())
-
-        self.embed_layer1_2 = nn.Sequential(nn.Conv2d(16, 16, kernel_size=[channel_size, 1], padding='valid'),
-                                            nn.BatchNorm2d(16),
-                                            nn.GELU())
-
-        
-        '''
-        # self.input_projection = nn.Conv1d(channel_size, emb_size, kernel_size=patch_size, stride=patch_size)
-        self.SinPositionalEncoding = PositionalEmbedding(int(seq_len/m), emb_size)
-        self.contex_encoder = Encoder(config)
-        self.predict_head = nn.Linear(emb_size, config['num_labels'])
-
-
     def forward(self, x):
-        # x = self.embed_layer1(x.unsqueeze(1))
-        # x = self.embed_layer1_2(x)
-        # patches = self.input_projection(x.squeeze(2)).transpose(1, 2)
-        # input is (bs, 1, C, T)
-        # x = self.Norm(x)
-        # x = gaussrank_transform(x)
         out = x.unsqueeze(1)
         out = self.depthwise_conv(out)  # (bs, embedding, 1 , T)
-        out = out.permute(0, 2, 1, 3)  # (bs, 1, embedding, T)
+        out = out.transpose(1, 2)  # (bs, 1, embedding, T)
         out = self.spatial_padding(out)
         out = self.spatialwise_conv1(out)  # (bs, 1, embedding, T)
         out = self.SiLU(out)
@@ -309,12 +344,21 @@ class EEG_JEPA_Sup(nn.Module):
         out = self.spatial_padding(out)
         out = self.spatialwise_conv2(out)
         out = out.squeeze(1)  # (bs, embedding, T // m)
-        out = out.permute(0, 2, 1)  # (bs, T // m, embedding)
+        out = out.transpose(1, 2)  # (bs, T // m, embedding)
         patches = self.SiLU(out)
-        patches += self.SinPositionalEncoding(patches)
-        out = self.contex_encoder(patches)
-        # out = out.view(out.shape[0], -1)
-        return self.predict_head(torch.mean(out, dim=1))
+        return patches
+
+
+class InputProjection(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        channel_size, seq_len = config['Data_shape'][1], config['Data_shape'][2]
+        emb_size = config['emb_size']
+        self.Input_projection = nn.Conv1d(channel_size, emb_size, kernel_size=config['patch_size'], stride=config['patch_size'])
+
+    def forward(self, x):
+        patches = self.Input_projection(x).transpose(1, 2)
+        return patches
 
 
 class ConvTran(nn.Module):

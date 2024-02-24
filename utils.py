@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 from datetime import datetime
+# import mne
 import logging
 
 from Dataset import data_loader
@@ -25,7 +26,7 @@ def Setup(args):
     output_dir = os.path.join(config['output_dir'], config['Training_mode'])
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    config['problem'] = config['data_dir'].split('/')[-1]
+    # config['problem'] = config['data_dir'].split('/')[-1]
     output_dir = os.path.join(output_dir, config['data_dir'], initial_timestamp.strftime("%Y-%m-%d_%H-%M"))
     config['output_dir'] = output_dir
     config['save_dir'] = os.path.join(output_dir, 'checkpoints')
@@ -38,12 +39,7 @@ def Setup(args):
         json.dump(config, fp, indent=4, sort_keys=True)
 
     logger.info("Stored configuration file in '{}'".format(output_dir))
-    if config['seed'] is not None:
-        torch.manual_seed(config['seed'])
-    config['device'] = torch.device('cuda' if (torch.cuda.is_available() and config['gpu'] != '-1') else 'cpu')
-    logger.info("Using device: {}".format(config['device']))
-    if config['device'] == 'cuda':
-        logger.info("Device index: {}".format(torch.cuda.current_device()))
+
     return config
 
 
@@ -64,8 +60,21 @@ def create_dirs(dirs):
         exit(-1)
 
 
+def Initialization(config):
+    if config['seed'] is not None:
+        torch.manual_seed(config['seed'])
+    device = torch.device('cuda' if (torch.cuda.is_available() and config['gpu'] != '-1') else 'cpu')
+    logger.info("Using device: {}".format(device))
+    if device == 'cuda':
+        logger.info("Device index: {}".format(torch.cuda.current_device()))
+    return device
+
+
 def Data_Loader(config):
-    Data = data_loader.load(config)
+    if config['problem'] =='TUEV':
+        Data = data_loader.tuev_loader(config)
+    else:
+        Data = data_loader.load(config)
     # Data = convert_frequency(config, Data)
     return Data
 

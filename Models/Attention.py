@@ -163,11 +163,13 @@ class CrossAttnTRMBlock(nn.Module):
         self.skipconnect2 = SublayerConnection(d_model, enable_res_parameter, dropout)
 
     def forward(self, rep_visible, rep_mask_token, mask=None):
+        # x = torch.cat((rep_visible, rep_mask_token), dim=1)
+        # x = self.skipconnect1(x, lambda _x: self.attn.forward(_x, _x, _x, mask=mask))
+        # x = x[:, rep_visible.shape[1]:, :]
         x = [rep_visible, rep_mask_token]
         x = self.skipconnect1(x, lambda _x: self.attn.forward(_x[1], _x[0], _x[0], mask=mask))
         x = self.skipconnect2(x, self.ffn)
         return x
-
 
 
 class PositionalEmbedding(nn.Module):

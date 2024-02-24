@@ -8,6 +8,7 @@ import sys
 
 import matplotlib.pyplot as plt
 import pandas as pd
+
 from sklearn import metrics
 from tabulate import tabulate
 import math
@@ -458,6 +459,7 @@ class Analyzer(object):
         # returns metrics for each class, in the same order as existing_class_names
         self.precision, self.recall, self.f1, self.support = metrics.precision_recall_fscore_support(y_true, y_pred,
                                                                                                      labels=self.existing_class_ind)
+
 
         # Print report
         if self.print_conf_mat:

@@ -3,9 +3,11 @@ import numpy as np
 import pandas as pd
 import argparse
 import logging
-# Import Project Modules -----------------------------------------------------------------------------------------------
 from running import Rep_Learning, Supervised
-from utils import Setup, Data_Loader, print_title
+
+# Import Project Modules -----------------------------------------------------------------------------------------------
+from utils import Setup, Initialization, Data_Loader, print_title
+
 
 logger = logging.getLogger('__main__')
 parser = argparse.ArgumentParser()
@@ -23,13 +25,14 @@ parser.add_argument('--val_ratio', type=float, default=0.2, help="Proportion of 
 parser.add_argument('--print_interval', type=int, default=10, help='Print batch info every this many batches')
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------- Parameters and Hyperparameter ----------------------------------------------
-parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
-parser.add_argument('--batch_size', type=int, default=128, help='Training batch size')
+parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')
+parser.add_argument('--batch_size', type=int, default=256, help='Training batch size')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.1, help='Dropout regularization ratio')
 parser.add_argument('--val_interval', type=int, default=2, help='Evaluate on validation every XX epochs. Must be >= 1')
 parser.add_argument('--key_metric', choices={'loss', 'accuracy'}, default='loss', help='Metric used for best epoch')
-# -------------------------------------------------- EEG2Rep ----------------------------------------------------------
+
+# -------------------------------------------------- EEG-JEPA ----------------------------------------------------------
 parser.add_argument('--Training_mode', default='Rep-Learning', choices={'Rep-Learning', 'Initialization', 'Supervised'})
 parser.add_argument('--Input_Embedding', default=['C'], choices={'T', 'C', 'C-T'}, help="Input Embedding Architecture")
 parser.add_argument('--Pos_Embedding', default=['Sin'], choices={'Sin', 'Emb'}, help="Position Embedding Architecture")
@@ -37,7 +40,7 @@ parser.add_argument('--Pos_Embedding', default=['Sin'], choices={'Sin', 'Emb'}, 
 parser.add_argument('--Encoder', default=['T'], choices={'T', 'C', 'C-T'}, help="Context/Target Encoder Architecture")
 parser.add_argument('--layers', type=int, default=4, help="Number of layers for the context/target encoders")
 
-parser.add_argument('--pre_layers', type=int, default=1, help="Number of layers for the Predictor")
+parser.add_argument('--pre_layers', type=int, default=2, help="Number of layers for the Predictor")
 parser.add_argument('--mask_ratio', type=float, default=0.5, help=" masking ratio")
 parser.add_argument('--momentum', type=float, default=0.99, help="Beta coefficient for EMA update")
 
@@ -51,6 +54,10 @@ args = parser.parse_args()
 All_Results = ['Datasets', 'FC_layer']
 if __name__ == '__main__':
     config = Setup(args)  # configuration dictionary
+    config['device'] = Initialization(config)
+
+for problem in os.listdir(config['data_dir']):
+    config['problem'] = problem
     print_title(config['problem'])
     logger.info("Loading Data ...")
     Data = Data_Loader(config)
@@ -69,3 +76,6 @@ if __name__ == '__main__':
 
 All_Results_df = pd.DataFrame(All_Results)
 All_Results_df.to_csv(os.path.join(config['output_dir'], config['Training_mode'] + '.csv'))
+
+
+

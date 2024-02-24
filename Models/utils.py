@@ -1,15 +1,18 @@
 import json
+import os
 import sys
 import builtins
 import functools
 import time
 from copy import deepcopy
+import numpy as np
 import torch
-
+import matplotlib.pyplot as plt
 
 import logging
 logging.basicConfig(format='%(asctime)s | %(levelname)s : %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+plt.style.use('ggplot')
 
 
 def timer(func):
@@ -91,6 +94,41 @@ class SaveBestACCModel:
             save_model(path, epoch, model, optimizer)
 
 
+def save_plots(train_acc, valid_acc, train_loss, valid_loss):
+    """
+    Function to save the loss and accuracy plots to disk.
+    """
+    # accuracy plots
+    plt.figure(figsize=(10, 7))
+    plt.plot(
+        train_acc, color='green', linestyle='-',
+        label='train accuracy'
+    )
+    plt.plot(
+        valid_acc, color='blue', linestyle='-',
+        label='validataion accuracy'
+    )
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('outputs/accuracy.png')
+
+    # loss plots
+    plt.figure(figsize=(10, 7))
+    plt.plot(
+        train_loss, color='orange', linestyle='-',
+        label='train loss'
+    )
+    plt.plot(
+        valid_loss, color='red', linestyle='-',
+        label='validataion loss'
+    )
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig('outputs/loss.png')
+
+
 def load_model(model, model_path, optimizer=None, resume=False, change_output=False,
                lr=None, lr_step=None, lr_factor=None):
     start_epoch = 0
@@ -135,6 +173,44 @@ def load_config(config_filepath):
     return config
 
 
+def create_dirs(dirs):
+    """
+    Input:
+        dirs: a list of directories to create, in case these directories are not found
+    Returns:
+        exit_code: 0 if success, -1 if failure
+    """
+    try:
+        for dir_ in dirs:
+            if not os.path.exists(dir_):
+                os.makedirs(dir_)
+        return 0
+    except Exception as err:
+        print("Creating directories error: {0}".format(err))
+        exit(-1)
+
+
+
+def write_row(sheet, row_ind, data_list):
+    """Write a list to row_ind row of an excel sheet"""
+
+    row = sheet.row(row_ind)
+    for col_ind, col_value in enumerate(data_list):
+        row.write(col_ind, col_value)
+    return
+
+
+def write_table_to_sheet(table, work_book, sheet_name=None):
+    """Writes a table implemented as a list of lists to an excel sheet in the given work book object"""
+
+    sheet = work_book.add_sheet(sheet_name)
+
+    for row_ind, row_list in enumerate(table):
+        write_row(sheet, row_ind, row_list)
+
+    return work_book
+
+
 class Printer(object):
     """Class for printing output by refreshing the same line in the console, e.g. for indicating progress of a process"""
 
@@ -152,13 +228,6 @@ class Printer(object):
         sys.stdout.flush()
 
 
-def count_parameters(model, trainable=False):
-    if trainable:
-        return sum(p.numel() for p in model.parameters() if p.requires_grad)
-    else:
-        return sum(p.numel() for p in model.parameters())
-
-
 def readable_time(time_difference):
     """Convert a float measuring time difference in seconds into a tuple of (hours, minutes, seconds)"""
 
@@ -167,3 +236,107 @@ def readable_time(time_difference):
     seconds = time_difference % 60
 
     return hours, minutes, seconds
+
+
+# def check_model1(model, verbose=False, stop_on_error=False):
+#     status_ok = True
+#     for name, param in model.named_parameters():
+#         nan_grads = torch.isnan(param.grad)
+#         nan_params = torch.isnan(param)
+#         if nan_grads.any() or nan_params.any():
+#             status_ok = False
+#             print("Param {}: {}/{} nan".format(name, torch.sum(nan_params), param.numel()))
+#             if verbose:
+#                 print(param)
+#             print("Grad {}: {}/{} nan".format(name, torch.sum(nan_grads), param.grad.numel()))
+#             if verbose:
+#                 print(param.grad)
+#             if stop_on_error:
+#                 ipdb.set_trace()
+#     if status_ok:
+#         print("Model Check: OK")
+#     else:
+#         print("Model Check: PROBLEM")
+
+
+
+
+def check_tensor(X, verbose=True, zero_thresh=1e-8, inf_thresh=1e6):
+
+    is_nan = torch.isnan(X)
+    if is_nan.any():
+        print("{}/{} nan".format(torch.sum(is_nan), X.numel()))
+        return False
+
+    num_small = torch.sum(torch.abs(X) < zero_thresh)
+    num_large = torch.sum(torch.abs(X) > inf_thresh)
+
+    if verbose:
+        print("Shape: {}, {} elements".format(X.shape, X.numel()))
+        print("No 'nan' values")
+        print("Min: {}".format(torch.min(X)))
+        print("Median: {}".format(torch.median(X)))
+        print("Max: {}".format(torch.max(X)))
+
+        print("Histogram of values:")
+        values = X.view(-1).detach().numpy()
+        hist, binedges = np.histogram(values, bins=20)
+        for b in range(len(binedges) - 1):
+            print("[{}, {}): {}".format(binedges[b], binedges[b + 1], hist[b]))
+
+        print("{}/{} abs. values < {}".format(num_small, X.numel(), zero_thresh))
+        print("{}/{} abs. values > {}".format(num_large, X.numel(), inf_thresh))
+
+    if num_large:
+        print("{}/{} abs. values > {}".format(num_large, X.numel(), inf_thresh))
+        return False
+
+    return True
+
+
+def count_parameters(model, trainable=False):
+    if trainable:
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        return sum(p.numel() for p in model.parameters())
+
+
+def recursively_hook(model, hook_fn):
+    for name, module in model.named_children(): #model._modules.items():
+        if len(list(module.children())) > 0:  # if not leaf node
+            for submodule in module.children():
+                recursively_hook(submodule, hook_fn)
+        else:
+            module.register_forward_hook(hook_fn)
+
+
+def compute_loss(net: torch.nn.Module,
+                 dataloader: torch.utils.data.DataLoader,
+                 loss_function: torch.nn.Module,
+                 device: torch.device = 'cpu') -> torch.Tensor:
+    """Compute the loss of a network on a given dataset.
+
+    Does not compute gradient.
+
+    Parameters
+    ----------
+    net:
+        Network to evaluate.
+    dataloader:
+        Iterator on the dataset.
+    loss_function:
+        Loss function to compute.
+    device:
+        Torch device, or :py:class:`str`.
+
+    Returns
+    -------
+    Loss as a tensor with no grad.
+    """
+    running_loss = 0
+    with torch.no_grad():
+        for x, y in dataloader:
+            netout = net(x.to(device)).cpu()
+            running_loss += loss_function(y, netout)
+
+    return running_loss / len(dataloader)

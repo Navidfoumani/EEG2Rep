@@ -4,7 +4,6 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 from datetime import datetime
-import mne
 import logging
 
 from Dataset import data_loader

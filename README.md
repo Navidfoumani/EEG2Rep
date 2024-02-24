@@ -18,3 +18,4 @@ This is a PyTorch implementation of **EEG2Rep: Enhancing Self-supervised EEG Rep
 </p> 
 
 ## Overview 
+## Test

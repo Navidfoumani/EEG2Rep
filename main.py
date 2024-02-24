@@ -3,7 +3,9 @@ import numpy as np
 import pandas as pd
 import argparse
 import logging
-# from running import Rep_Learning, Supervised
+# Import Project Modules -----------------------------------------------------------------------------------------------
+from running import Rep_Learning, Supervised
+from utils import Setup, Data_Loader, print_title
 
 logger = logging.getLogger('__main__')
 parser = argparse.ArgumentParser()
@@ -46,4 +48,25 @@ parser.add_argument('--num_heads', type=int, default=8, help='Number of multi-he
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 args = parser.parse_args()
+args = parser.parse_args()
+All_Results = ['Datasets', 'FC_layer']
+if __name__ == '__main__':
+    config = Setup(args)  # configuration dictionary
+    print_title(config['problem'])
+    logger.info("Loading Data ...")
+    Data = Data_Loader(config)
+    if config['Training_mode'] == 'Rep-Learning':
+        best_aggr_metrics_test, all_metrics = Rep_Learning(config, Data)
+    elif config['Training_mode'] == 'Supervised':
+        best_aggr_metrics_test, all_metrics = Supervised(config, Data)
 
+    print_str = 'Best Model Test Summary: '
+    for k, v in best_aggr_metrics_test.items():
+        print_str += '{}: {} | '.format(k, v)
+    print_title(config['problem'])
+    print(print_str)
+    dic_position_results = [config['problem'], all_metrics['total_accuracy']]
+    All_Results = np.vstack((All_Results, dic_position_results))
+
+All_Results_df = pd.DataFrame(All_Results)
+All_Results_df.to_csv(os.path.join(config['output_dir'], config['Training_mode'] + '.csv'))

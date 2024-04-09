@@ -185,6 +185,7 @@ def plot_tSNE(data, labels):
     plt.savefig('SSL.pdf', bbox_inches='tight', format='pdf')
     # plt.show()
 
+
 def off_diagonal(x):
     n, m = x.shape
     assert n == m

@@ -8,7 +8,6 @@ from running import Rep_Learning, Supervised
 # Import Project Modules -----------------------------------------------------------------------------------------------
 from utils import Setup, Initialization, Data_Loader, print_title
 
-
 logger = logging.getLogger('__main__')
 parser = argparse.ArgumentParser()
 # ----------------------------------------------------------------------------------------------------------------------
@@ -20,8 +19,6 @@ parser.add_argument('--seed', default=1234, type=int, help='Seed used for splitt
 parser.add_argument('--data_dir', default='Dataset/Crowdsource', help='Data directory')
 parser.add_argument('--output_dir', default='Results',
                     help='Root output directory. Time-stamped directories will be created inside.')
-parser.add_argument('--Norm', type=bool, default=False, help='Data Normalization')
-parser.add_argument('--val_ratio', type=float, default=0.2, help="Proportion of the train-set to be used as validation")
 parser.add_argument('--print_interval', type=int, default=10, help='Print batch info every this many batches')
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------- Parameters and Hyperparameter ----------------------------------------------
@@ -29,9 +26,10 @@ parser.add_argument('--epochs', type=int, default=100, help='Number of training 
 parser.add_argument('--batch_size', type=int, default=256, help='Training batch size')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.1, help='Dropout regularization ratio')
+parser.add_argument('--Norm', type=bool, default=False, help='Data Normalization')
+parser.add_argument('--val_ratio', type=float, default=0.2, help="Proportion of the train-set to be used as validation")
 parser.add_argument('--val_interval', type=int, default=2, help='Evaluate on validation every XX epochs. Must be >= 1')
 parser.add_argument('--key_metric', choices={'loss', 'accuracy'}, default='loss', help='Metric used for best epoch')
-
 # -------------------------------------------------- EEG-JEPA ----------------------------------------------------------
 parser.add_argument('--Training_mode', default='Rep-Learning', choices={'Rep-Learning', 'Initialization', 'Supervised'})
 parser.add_argument('--Input_Embedding', default=['C'], choices={'T', 'C', 'C-T'}, help="Input Embedding Architecture")

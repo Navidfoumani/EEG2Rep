@@ -67,7 +67,6 @@ def Rep_Learning(config, Data):
     train_repr, train_labels = make_representation(SS_Encoder, train_loader)
     test_repr, test_labels = make_representation(SS_Encoder, test_loader)
 
-
     clf = fit_lr(train_repr.cpu().detach().numpy(), train_labels.cpu().detach().numpy())
     y_hat = clf.predict(test_repr.cpu().detach().numpy())
     plot_tSNE(test_repr.cpu().detach().numpy(), test_labels.cpu().detach().numpy())
@@ -143,6 +142,7 @@ def Supervised(config, Data):
     best_test_evaluator = SupervisedTrainer(best_Encoder, test_loader, None, config, print_conf_mat=True)
     best_aggr_metrics_test, all_metrics = best_test_evaluator.evaluate(keep_all=True)
     return best_aggr_metrics_test, all_metrics
+
 
 def plot_tSNE(data, labels):
     # Create a TSNE instance with 2 components (dimensions)

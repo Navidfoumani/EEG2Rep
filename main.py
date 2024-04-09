@@ -22,7 +22,7 @@ parser.add_argument('--output_dir', default='Results',
 parser.add_argument('--print_interval', type=int, default=10, help='Print batch info every this many batches')
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------- Parameters and Hyperparameter ----------------------------------------------
-parser.add_argument('--epochs', type=int, default=200, help='Number of training epochs')
+parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')
 parser.add_argument('--batch_size', type=int, default=256, help='Training batch size')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.1, help='Dropout regularization ratio')
@@ -31,7 +31,7 @@ parser.add_argument('--val_ratio', type=float, default=0.2, help="Proportion of 
 parser.add_argument('--val_interval', type=int, default=2, help='Evaluate on validation every XX epochs. Must be >= 1')
 parser.add_argument('--key_metric', choices={'loss', 'accuracy'}, default='loss', help='Metric used for best epoch')
 # -------------------------------------------------- EEG-JEPA ----------------------------------------------------------
-parser.add_argument('--Training_mode', default='Rep-Learning', choices={'Rep-Learning', 'Initialization', 'Supervised'})
+parser.add_argument('--Training_mode', default='Supervised', choices={'Rep-Learning', 'Initialization', 'Supervised'})
 parser.add_argument('--Input_Embedding', default=['C'], choices={'T', 'C', 'C-T'}, help="Input Embedding Architecture")
 parser.add_argument('--Pos_Embedding', default=['Sin'], choices={'Sin', 'Emb'}, help="Position Embedding Architecture")
 

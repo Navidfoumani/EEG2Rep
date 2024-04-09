@@ -8,35 +8,8 @@ from Models.Attention import *
 
 
 def Encoder_factory(config):
-    if config['Training_mode'] == 'Rep-Learning':
-        model = EEG2Rep(config, num_classes=config['num_labels'])
-    else:
-        model = EEG2Rep(config, num_classes=config['num_labels'])
+    model = EEG2Rep(config, num_classes=config['num_labels'])
     return model
-
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-
-class Encoder(nn.Module):
-    def __init__(self, config):
-        super(Encoder, self).__init__()
-        d_model = config['emb_size']
-        attn_heads = config['num_heads']
-        # d_ffn = 4 * d_model
-        d_ffn = config['dim_ff']
-        layers = config['layers']
-        dropout = config['dropout']
-        enable_res_parameter = True
-        # TRMs
-        self.TRMs = nn.ModuleList(
-            [TransformerBlock(d_model, attn_heads, d_ffn, enable_res_parameter, dropout) for i in range(layers)])
-
-    def forward(self, x):
-        for TRM in self.TRMs:
-            x = TRM(x, mask=None)
-        return x
 
 
 class EEG2Rep(nn.Module):
@@ -86,7 +59,6 @@ class EEG2Rep(nn.Module):
             return out.squeeze()
 
     def pretrain_forward(self, x):
-
         patches = self.InputEmbedding(x)  # (Batch, l, d_x)
         patches += self.PositionalEncoding(patches)
 
@@ -94,9 +66,9 @@ class EEG2Rep(nn.Module):
         rep_mask_token = + self.PositionalEncoding(rep_mask_token)
 
         index = np.arange(patches.shape[1])
-        m_index_chunk = select_chunks_by_indices(index, chunk_count=2, target_percentage=self.mask_ratio)
-        m_index = np.ravel(m_index_chunk)
-        v_index = np.setdiff1d(index, m_index)
+        index_chunk = Semantic_Subsequence_Preserving(index, chunk_count=3, masked_percentage=self.mask_ratio)
+        v_index = np.ravel(index_chunk)
+        m_index = np.setdiff1d(index, v_index)
 
         # v_index = np.sort(np.unique(np.concatenate(m_index_chunk)))
         # m_index = np.setdiff1d(index, v_index)
@@ -151,18 +123,35 @@ class InputEmbedding(nn.Module):
         return patches
 
 
-def select_chunks_by_indices(time_step_indices, chunk_count=2, target_percentage=0.5):
+class Encoder(nn.Module):
+    def __init__(self, config):
+        super(Encoder, self).__init__()
+        d_model = config['emb_size']
+        attn_heads = config['num_heads']
+        # d_ffn = 4 * d_model
+        d_ffn = config['dim_ff']
+        layers = config['layers']
+        dropout = config['dropout']
+        enable_res_parameter = True
+        # TRMs
+        self.TRMs = nn.ModuleList(
+            [TransformerBlock(d_model, attn_heads, d_ffn, enable_res_parameter, dropout) for i in range(layers)])
+
+    def forward(self, x):
+        for TRM in self.TRMs:
+            x = TRM(x, mask=None)
+        return x
+
+
+def Semantic_Subsequence_Preserving(time_step_indices, chunk_count, masked_percentage):
+    target_percentage = 1 - masked_percentage
     # Get the total number of time steps
     total_time_steps = len(time_step_indices)
-
     # Calculate the desired total time steps for the selected chunks
     target_total_time_steps = int(total_time_steps * target_percentage)
 
     # Calculate the size of each chunk
     chunk_size = target_total_time_steps // chunk_count
-
-    # Calculate the minimum distance between starting points
-    min_starting_distance = chunk_size
 
     # Randomly select starting points for each chunk with minimum distance
     start_points = [random.randint(0, total_time_steps - chunk_size)]
@@ -189,6 +178,7 @@ class Predictor(nn.Module):
         return rep_mask_token
 
 
-
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 

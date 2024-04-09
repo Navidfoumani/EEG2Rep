@@ -9,10 +9,8 @@ from trainer import *
 from eval import fit_lr,  make_representation
 from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.metrics import confusion_matrix
-
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
-
 
 ####
 logger = logging.getLogger('__main__')
@@ -22,7 +20,6 @@ def Rep_Learning(config, Data):
     # ---------------------------------------- Self Supervised Data -------------------------------------
     train_dataset = dataset_class(Data['All_train_data'], Data['All_train_label'], config['patch_size'])
     train_loader = DataLoader(dataset=train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
-
     # For Linear Probing During the Pre-Training
     test_dataset = dataset_class(Data['test_data'], Data['test_label'], config['patch_size'])
     test_loader = DataLoader(dataset=test_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
@@ -32,7 +29,6 @@ def Rep_Learning(config, Data):
     config['Data_shape'] = Data['All_train_data'].shape
     config['num_labels'] = int(max(Data['All_train_label'])) + 1
     Encoder = Encoder_factory(config)
-
     logger.info("Model:\n{}".format(Encoder))
     logger.info("Total number of parameters: {}".format(count_parameters(Encoder)))
     # ---------------------------------------------- Model Initialization ----------------------------------------------

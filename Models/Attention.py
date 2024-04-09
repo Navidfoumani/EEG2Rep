@@ -176,7 +176,6 @@ class PositionalEmbedding(nn.Module):
 
     def __init__(self, max_len, d_model):
         super(PositionalEmbedding, self).__init__()
-
         # Compute the positional encodings once in log space.
         self.pe = nn.Embedding(max_len, d_model)
 

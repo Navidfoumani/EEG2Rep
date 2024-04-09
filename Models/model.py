@@ -46,32 +46,6 @@ class Encoder(nn.Module):
         return x
 
 
-class Target_Encoder(nn.Module):
-    def __init__(self, config):
-        super(Target_Encoder, self).__init__()
-        d_model = config['emb_size']
-        attn_heads = config['num_heads']
-        # d_ffn = 4 * d_model
-        d_ffn = config['dim_ff']
-        layers = config['layers']
-        dropout = config['dropout']
-        enable_res_parameter = True
-        # TRMs
-        self.TRMs = nn.ModuleList(
-            [TransformerBlock(d_model, attn_heads, d_ffn, enable_res_parameter, dropout) for i in range(layers)])
-
-    def forward(self, x):
-        layer_outputs = []
-        for TRM in self.TRMs:
-            x = TRM(x, mask=None)
-            layer_outputs.append(x.clone())
-
-        # Return the average of the last three layer outputs
-        avg_last_3_layers = [F.instance_norm(tl.float()) for tl in layer_outputs]
-        avg_last_3_layers = sum(avg_last_3_layers) / len(avg_last_3_layers)
-        return avg_last_3_layers
-
-
 class EEG2Rep(nn.Module):
     def __init__(self, config, num_classes):
         super().__init__()
@@ -84,23 +58,20 @@ class EEG2Rep(nn.Module):
         emb_size = config['emb_size']  # d_x
         # Embedding Layer -----------------------------------------------------------
         config['pooling_size'] = 5  # Max pooling size in input embedding
-        seq_len = int(seq_len / config['pooling_size'])
-        self.PatchEmbedding = InputEmbedding(config)
+        seq_len = int(seq_len / config['pooling_size'])  # Number of patches (l)
+        self.InputEmbedding = InputEmbedding(config)  # input (Batch,Channel, length) -> output (Batch, l, d_x)
         self.PositionalEncoding = PositionalEmbedding(seq_len, emb_size)
         # -------------------------------------------------------------------------
-
         self.momentum = config['momentum']
-        self.linear_proba = True
         self.device = config['device']
         self.mask_ratio = config['mask_ratio']
         self.mask_len = int(config['mask_ratio'] * seq_len)
-        self.mask_token = nn.Parameter(torch.randn(emb_size, ))
+        self.mask_token = nn.Parameter(torch.randn(emb_size,))
         self.contex_encoder = Encoder(config)
         self.target_encoder = copy.deepcopy(self.contex_encoder)
         # self.target_encoder = Target_Encoder(config)
         self.Predictor = Predictor(emb_size, config['num_heads'], config['dim_ff'], 1, config['pre_layers'])
         self.predict_head = nn.Linear(emb_size, config['num_labels'])
-
         self.gap = nn.AdaptiveAvgPool1d(1)
 
     def copy_weight(self):
@@ -115,7 +86,7 @@ class EEG2Rep(nn.Module):
 
     def linear_prob(self, x):
         with (torch.no_grad()):
-            patches = self.PatchEmbedding(x)
+            patches = self.InputEmbedding(x)
             patches += self.PositionalEncoding(patches)
             out = self.contex_encoder(patches)
             out = out.transpose(2, 1)
@@ -124,7 +95,7 @@ class EEG2Rep(nn.Module):
 
     def pretrain_forward(self, x):
 
-        patches = self.PatchEmbedding(x)
+        patches = self.InputEmbedding(x)  # (Batch, l, d_x)
         patches += self.PositionalEncoding(patches)
 
         rep_mask_token = self.mask_token.repeat(patches.shape[0], patches.shape[1], 1)
@@ -153,7 +124,7 @@ class EEG2Rep(nn.Module):
 
     def forward(self, x):
 
-        patches = self.PatchEmbedding(x)
+        patches = self.InputEmbedding(x)
         patches += self.PositionalEncoding(patches)
         out = self.contex_encoder(patches)
         return self.predict_head(torch.mean(out, dim=1))
@@ -232,8 +203,7 @@ class EEG_JEPA_Sup(nn.Module):
         # Embedding Layer -----------------------------------------------------------
         m = 5
         seq_len = int(seq_len / m)
-        self.PatchEmbedding = PatchEmbedding(config)
-
+        self.PatchEmbedding = InputEmbedding(config)
         self.SinPositionalEncoding = PositionalEmbedding(seq_len, emb_size)
         self.contex_encoder = Encoder(config)
         # self.predict_head = nn.Linear(emb_size*int(seq_len/m), config['num_labels'])

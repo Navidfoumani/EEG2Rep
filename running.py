@@ -37,7 +37,7 @@ def Rep_Learning(config, Data):
     logger.info("Total number of parameters: {}".format(count_parameters(Encoder)))
     # ---------------------------------------------- Model Initialization ----------------------------------------------
     # Specify which networks you want to optimize
-    networks_to_optimize = [Encoder.contex_encoder, Encoder.PatchEmbedding, Encoder.Predictor]
+    networks_to_optimize = [Encoder.contex_encoder, Encoder.InputEmbedding, Encoder.Predictor]
     # networks_to_optimize = [Encoder.contex_encoder, Encoder.Predictor]
     # networks_not_to_optimize = [Encoder.target_encoder, Encoder.PatchEmbedding]
     # Convert parameters to tensors

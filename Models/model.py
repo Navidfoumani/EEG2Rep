@@ -66,12 +66,9 @@ class EEG2Rep(nn.Module):
         rep_mask_token = + self.PositionalEncoding(rep_mask_token)
 
         index = np.arange(patches.shape[1])
-        index_chunk = Semantic_Subsequence_Preserving(index, chunk_count=3, masked_percentage=self.mask_ratio)
+        index_chunk = Semantic_Subsequence_Preserving(index, 2, self.mask_ratio)
         v_index = np.ravel(index_chunk)
         m_index = np.setdiff1d(index, v_index)
-
-        # v_index = np.sort(np.unique(np.concatenate(m_index_chunk)))
-        # m_index = np.setdiff1d(index, v_index)
 
         # random.shuffle(index)
         # v_index = index[:-self.mask_len]
@@ -143,8 +140,7 @@ class Encoder(nn.Module):
         return x
 
 
-def Semantic_Subsequence_Preserving(time_step_indices, chunk_count, masked_percentage):
-    target_percentage = 1 - masked_percentage
+def Semantic_Subsequence_Preserving(time_step_indices, chunk_count, target_percentage):
     # Get the total number of time steps
     total_time_steps = len(time_step_indices)
     # Calculate the desired total time steps for the selected chunks

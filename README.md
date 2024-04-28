@@ -28,3 +28,38 @@ This is a PyTorch implementation of **EEG2Rep: Enhancing Self-supervised EEG Rep
    Please use the following link to download and preprocess the TUEV and TUAB datasets.
 
    [Download Temple University Datasets](#link)
+
+## Setup
+
+_Instructions refer to Unix-based systems (e.g. Linux, MacOS)._
+
+This code has been tested with `Python 3.7` and `3.8`.
+
+`pip install -r requirements.txt`
+
+## Run
+
+To see all command options with explanations, run: `python main.py --help`
+In `main.py` you can select the datasets and modify the model parameters.
+For example:
+
+`self.parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')`
+
+or you can set the paprameters:
+
+`python main.py --epochs 100 --data_dir Dataset/Crowdsource`
+
+## Citation
+If you find **ConvTran** useful for your research, please consider citing this paper using the following information:
+
+````
+```
+@article{foumani2024eeg2rep,
+  title={EEG2Rep: Enhancing Self-supervised EEG Representation Through Informative Masked Inputs},
+  author={Foumani, Navid Mohammadi and Mackellar, Geoffrey and Ghane, Soheila and Irtza, Saad and Nguyen, Nam and Salehi, Mahsa},
+  journal={arXiv preprint arXiv:2402.17772},
+  year={2024}
+}
+
+```
+````

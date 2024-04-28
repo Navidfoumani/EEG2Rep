@@ -45,12 +45,12 @@ For example:
 
 `self.parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')`
 
-or you can set the paprameters:
+or you can set the parameters:
 
 `python main.py --epochs 100 --data_dir Dataset/Crowdsource`
 
 ## Citation
-If you find **ConvTran** useful for your research, please consider citing this paper using the following information:
+If you find **EEG2Rep** useful for your research, please consider citing this paper using the following information:
 
 ````
 ```

@@ -17,4 +17,14 @@ This is a PyTorch implementation of **EEG2Rep: Enhancing Self-supervised EEG Rep
     <img src="Fig/EEG2Rep.png">
 </p> 
 
-## Overview 
+## Datasets 
+
+1. **Emotiv:**
+   To download the Emotiv public datasets, please follow the link below to access the preprocessed datasets, which are split subject-wise into train and test sets. After downloading, copy the datasets to your Dataset directory.
+
+   [Download Emotiv Public Datasets](https://drive.google.com/drive/folders/1KQyST6VJffWWD8r60AjscBy6MHLnT184?usp=sharing)
+
+2. **Temple University Datasets:**
+   Please use the following link to download and preprocess the TUEV and TUAB datasets.
+
+   [Download Temple University Datasets](#link)

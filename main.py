@@ -54,9 +54,6 @@ All_Results = ['Datasets', 'FC_layer']
 if __name__ == '__main__':
     config = Setup(args)  # configuration dictionary
     config['device'] = Initialization(config)
-
-for problem in os.listdir(config['data_dir']):
-    config['problem'] = problem
     print_title(config['problem'])
     logger.info("Loading Data ...")
     Data = Data_Loader(config)

@@ -18,7 +18,7 @@ logger = logging.getLogger('__main__')
 
 def Rep_Learning(config, Data):
     # ---------------------------------------- Self Supervised Data -------------------------------------
-    pre_train_dataset = dataset_class(Data['pre_train_data'], Data['pre_train_label'], config['patch_size'])
+    pre_train_dataset = dataset_class(Data['All_train_data'], Data['All_train_label'], config['patch_size'])
     pre_train_loader = DataLoader(dataset=pre_train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
 
     train_dataset = dataset_class(Data['All_train_data'], Data['All_train_label'], config['patch_size'])

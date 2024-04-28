@@ -18,6 +18,9 @@ logger = logging.getLogger('__main__')
 
 def Rep_Learning(config, Data):
     # ---------------------------------------- Self Supervised Data -------------------------------------
+    pre_train_dataset = dataset_class(Data['pre_train_data'], Data['pre_train_label'], config['patch_size'])
+    pre_train_loader = DataLoader(dataset=pre_train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
+
     train_dataset = dataset_class(Data['All_train_data'], Data['All_train_label'], config['patch_size'])
     train_loader = DataLoader(dataset=train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
     # For Linear Probing During the Pre-Training
@@ -53,7 +56,7 @@ def Rep_Learning(config, Data):
     Encoder.to(config['device'])
     # ------------------------------------------------- Training The Model ---------------------------------------------
     logger.info('Self-Supervised training...')
-    SS_trainer = Self_Supervised_Trainer(Encoder, train_loader, test_loader, config, l2_reg=0, print_conf_mat=False)
+    SS_trainer = Self_Supervised_Trainer(Encoder, pre_train_loader, train_loader, test_loader, config, l2_reg=0, print_conf_mat=False)
     SS_train_runner(config, Encoder, SS_trainer, save_path)
     # **************************************************************************************************************** #
     # --------------------------------------------- Downstream Task (classification)   ---------------------------------
@@ -84,8 +87,8 @@ def Rep_Learning(config, Data):
     test_loader = DataLoader(dataset=test_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
 
     logger.info('Starting Fine_Tuning...')
-    S_trainer = SupervisedTrainer(SS_Encoder, train_loader, None, config, print_conf_mat=False)
-    S_val_evaluator = SupervisedTrainer(SS_Encoder, val_loader, None, config, print_conf_mat=False)
+    S_trainer = SupervisedTrainer(SS_Encoder, None, train_loader, None, config, print_conf_mat=False)
+    S_val_evaluator = SupervisedTrainer(SS_Encoder, None, val_loader, None, config, print_conf_mat=False)
 
     save_path = os.path.join(config['save_dir'], config['problem'] + '_model_{}.pth'.format('last'))
     Strain_runner(config, SS_Encoder, S_trainer, S_val_evaluator, save_path)
@@ -93,7 +96,7 @@ def Rep_Learning(config, Data):
     best_Encoder, optimizer, start_epoch = load_model(Encoder, save_path, config['optimizer'])
     best_Encoder.to(config['device'])
 
-    best_test_evaluator = SupervisedTrainer(best_Encoder, test_loader, None, config, print_conf_mat=True)
+    best_test_evaluator = SupervisedTrainer(best_Encoder, None, test_loader, None, config, print_conf_mat=True)
     best_aggr_metrics_test, all_metrics = best_test_evaluator.evaluate(keep_all=True)
     return best_aggr_metrics_test, all_metrics
 
@@ -112,8 +115,6 @@ def Supervised(config, Data):
 
     config['problem_type'] = 'Supervised'
     config['loss_module'] = get_loss_module()
-
-    save_path = os.path.join(config['save_dir'], config['problem'] +'model_{}.pth'.format('last'))
     # tensorboard_writer = SummaryWriter('summary')
     Encoder.to(config['device'])
     # ------------------------------------------------- Training The Model ---------------------------------------------
@@ -127,15 +128,15 @@ def Supervised(config, Data):
     val_loader = DataLoader(dataset=val_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
     test_loader = DataLoader(dataset=test_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
 
-    S_trainer = SupervisedTrainer(Encoder, train_loader, None, config, print_conf_mat=False)
-    S_val_evaluator = SupervisedTrainer(Encoder, val_loader, None, config, print_conf_mat=False)
+    S_trainer = SupervisedTrainer(Encoder, None, train_loader, None, config, print_conf_mat=False)
+    S_val_evaluator = SupervisedTrainer(Encoder, None, val_loader, None, config, print_conf_mat=False)
 
     save_path = os.path.join(config['save_dir'], config['problem'] + '_2_model_{}.pth'.format('last'))
     Strain_runner(config, Encoder, S_trainer, S_val_evaluator, save_path)
     best_Encoder, optimizer, start_epoch = load_model(Encoder, save_path, config['optimizer'])
     best_Encoder.to(config['device'])
 
-    best_test_evaluator = SupervisedTrainer(best_Encoder, test_loader, None, config, print_conf_mat=True)
+    best_test_evaluator = SupervisedTrainer(best_Encoder, None, test_loader, None, config, print_conf_mat=True)
     best_aggr_metrics_test, all_metrics = best_test_evaluator.evaluate(keep_all=True)
     return best_aggr_metrics_test, all_metrics
 

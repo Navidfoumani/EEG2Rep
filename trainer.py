@@ -12,14 +12,14 @@ from itertools import product
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from eval import fit_lr, fit_svm, make_representation
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_recall_curve
+from sklearn.metrics import accuracy_score, precision_recall_curve, roc_curve, auc
 from Models.loss import l2_reg_loss
 from Models import utils, analysis
 from Models.optimizers import get_optimizer
 import torch.distributed as dist
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
-
+import sklearn
 
 logger = logging.getLogger('__main__')
 
@@ -28,9 +28,10 @@ NEG_METRICS = {'loss'}  # metrics for which "better" is less
 
 class BaseTrainer(object):
 
-    def __init__(self, model, train_loader, test_loader, config, optimizer=None, l2_reg=None, print_interval=10,
+    def __init__(self, model, pre_train_loader, train_loader, test_loader, config, optimizer=None, l2_reg=None, print_interval=10,
                  console=True, print_conf_mat=False):
         self.model = model
+        self.pre_train_loader = pre_train_loader
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.device = config['device']
@@ -78,7 +79,7 @@ class Self_Supervised_Trainer(BaseTrainer):
         total_samples = 0  # total samples in epoch
         epoch_entropy_c = 0
         epoch_entropy_t = 0
-        for i, batch in enumerate(self.train_loader):
+        for i, batch in enumerate(self.pre_train_loader):
             X, targets, IDs = batch
             rep_mask, rep_mask_prediction, rep_contex, rep_target = self.model.pretrain_forward(X.to(self.device))
 
@@ -162,7 +163,6 @@ class Self_Supervised_Trainer(BaseTrainer):
             result_file.close()
 
         return self.epoch_metrics, self.model
-
 
 
 def plot_tSNE(data, labels):
@@ -257,6 +257,7 @@ def SS_train_runner(config, model, trainer, path):
             print_str += '{}: {:8f} | '.format(k, v)
         logger.info(print_str)
         # plot_loss(Total_loss,Time_loss,Freq_loss)
+        # if epoch > 50 or epochs < 50:
         save_best_model(aggr_metrics_train['loss'], epoch, model, optimizer, loss_module, path)
     total_runtime = time.time() - total_start_time
     logger.info("Train Time: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(total_runtime)))
@@ -331,7 +332,7 @@ class SupervisedTrainer(BaseTrainer):
             total_samples += len(loss)
             epoch_loss += batch_loss  # add total loss of batch
 
-        epoch_loss = epoch_loss / total_samples  # average loss per element for whole epoch
+        epoch_loss /= total_samples  # average loss per element for whole epoch
         self.epoch_metrics['epoch'] = epoch_num
         self.epoch_metrics['loss'] = epoch_loss
 
@@ -347,16 +348,13 @@ class SupervisedTrainer(BaseTrainer):
         self.epoch_metrics['accuracy'] = metrics_dict['total_accuracy']  # same as average recall over all classes
         self.epoch_metrics['precision'] = metrics_dict['prec_avg']  # average precision over all classes
 
-        self.epoch_metrics['auc'] = roc_auc_score(targets,predictions)
+        if max(targets) < 2 == 2:
+            false_pos_rate, true_pos_rate, _ = roc_curve(targets, probs[:, 1])  # 1D scores needed
+            self.epoch_metrics['AUROC'] = auc(false_pos_rate, true_pos_rate)
 
-        '''
-        if self.model.num_classes == 2:
-            false_pos_rate, true_pos_rate, _ = sklearn.metrics.roc_curve(targets, probs[:, 1])  # 1D scores needed
-            self.epoch_metrics['AUROC'] = sklearn.metrics.auc(false_pos_rate, true_pos_rate)
+            prec, rec, _ = precision_recall_curve(targets, probs[:, 1])
+            self.epoch_metrics['AUPRC'] = auc(rec, prec)
 
-            prec, rec, _ = sklearn.metrics.precision_recall_curve(targets, probs[:, 1])
-            self.epoch_metrics['AUPRC'] = sklearn.metrics.auc(rec, prec)
-        '''
         return self.epoch_metrics, metrics_dict
 
 
@@ -397,13 +395,14 @@ def Strain_runner(config, model, trainer, evaluator, path):
     metrics = []  # (for validation) list of lists: for each epoch, stores metrics like loss, ...
     best_metrics = {}
     save_best_model = utils.SaveBestModel()
-
+    # save_best_model = utils.SaveBestACCModel()
     for epoch in tqdm(range(start_epoch + 1, epochs + 1), desc='Training Epoch', leave=False):
 
         aggr_metrics_train = trainer.train_epoch(epoch)  # dictionary of aggregate epoch metrics
         aggr_metrics_val, best_metrics, best_value = validate(evaluator, tensorboard_writer, config, best_metrics,
                                                               best_value, epoch)
-        save_best_model(aggr_metrics_train['loss'], epoch, model, optimizer, loss_module, path)
+        save_best_model(aggr_metrics_val['loss'], epoch, model, optimizer, loss_module, path)
+        # save_best_model(aggr_metrics_train['loss'], epoch, model, optimizer, loss_module, path)
         metrics_names, metrics_values = zip(*aggr_metrics_train.items())
         metrics.append(list(metrics_values))
 

@@ -21,11 +21,15 @@ def load(config):
             Data['train_label'] = Data_npy.item().get('train_label')
             Data['val_data'] = Data_npy.item().get('val_data')
             Data['val_label'] = Data_npy.item().get('val_label')
-            Data['All_train_data'] = Data_npy.item().get('All_train_data')
-            Data['All_train_label'] = Data_npy.item().get('All_train_label')
             Data['test_data'] = Data_npy.item().get('test_data')
             Data['test_label'] = Data_npy.item().get('test_label')
             Data['max_len'] = Data['train_data'].shape[1]
+            Data['All_train_data'] = Data_npy.item().get('All_train_data')
+            Data['All_train_label'] = Data_npy.item().get('All_train_label')
+            if config['Pre_Training'] == 'Cross-domain':
+                Data['pre_train_data'], Data['pre_train_label'] = Cross_Domain_loader(Data_npy)
+                logger.info(
+                    "{} samples will be used for self-supervised Pre_training".format(len(Data['pre_train_label'])))
         else:
             Data['train_data'], Data['train_label'], Data['val_data'], Data['val_label'] = \
                 split_dataset(Data_npy.item().get('train_data'), Data_npy.item().get('train_label'), 0.1)
@@ -52,6 +56,26 @@ def load(config):
 
     return Data
 
+
+def Cross_Domain_loader(domain_data):
+    All_train_data = domain_data.item().get('All_train_data')
+    All_train_label = domain_data.item().get('All_train_label')
+    DREAMER = np.load('Dataset/DREAMER/DREAMER/DREAMER.npy', allow_pickle=True)
+    All_train_data = np.concatenate((All_train_data, DREAMER.item().get('All_train_data')), axis=0)
+    All_train_label = np.concatenate((All_train_label, DREAMER.item().get('All_train_label')), axis=0)
+    DriverDistraction = np.load('Dataset/DriverDistraction/DriverDistraction/DriverDistraction.npy', allow_pickle=True)
+    All_train_data = np.concatenate((All_train_data, DriverDistraction.item().get('All_train_data')), axis=0)
+    All_train_label = np.concatenate((All_train_label, DriverDistraction.item().get('All_train_label')), axis=0)
+    # Load DREAMER for Pre-Training
+    '''
+    Crowdsource = np.load('Dataset/Crowdsource/Crowdsource/Crowdsource.npy', allow_pickle=True)
+    All_train_data = np.concatenate((All_train_data, Crowdsource.item().get('All_train_data')), axis=0)
+    All_train_label = np.concatenate((All_train_label, Crowdsource.item().get('All_train_label')), axis=0)
+    All_train_data = np.concatenate((All_train_data, Crowdsource.item().get('test_data')), axis=0)
+    All_train_label = np.concatenate((All_train_label, Crowdsource.item().get('test_label')), axis=0)
+
+    '''
+    return All_train_data, All_train_label
 
 def tuev_loader(config):
     Data = {}

@@ -52,7 +52,7 @@ class EEG2Rep(nn.Module):
     def linear_prob(self, x):
         with (torch.no_grad()):
             patches = self.InputEmbedding(x)
-            patches += self.PositionalEncoding(patches)
+            # patches += self.PositionalEncoding(patches)
             out = self.contex_encoder(patches)
             out = out.transpose(2, 1)
             out = self.gap(out)
@@ -60,7 +60,7 @@ class EEG2Rep(nn.Module):
 
     def pretrain_forward(self, x):
         patches = self.InputEmbedding(x)  # (Batch, l, d_x)
-        patches += self.PositionalEncoding(patches)
+        # patches += self.PositionalEncoding(patches)
 
         rep_mask_token = self.mask_token.repeat(patches.shape[0], patches.shape[1], 1)
         rep_mask_token = + self.PositionalEncoding(rep_mask_token)
@@ -69,10 +69,6 @@ class EEG2Rep(nn.Module):
         index_chunk = Semantic_Subsequence_Preserving(index, 2, self.mask_ratio)
         v_index = np.ravel(index_chunk)
         m_index = np.setdiff1d(index, v_index)
-
-        # random.shuffle(index)
-        # v_index = index[:-self.mask_len]
-        # m_index = index[-self.mask_len:]
 
         visible = patches[:, v_index, :]
         rep_mask_token = rep_mask_token[:, m_index, :]

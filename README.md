@@ -27,7 +27,7 @@ This is a PyTorch implementation of **EEG2Rep: Enhancing Self-supervised EEG Rep
 2. **Temple University Datasets:**
    Please use the following link to download and preprocess the TUEV and TUAB datasets.
 
-   [Download Temple University Datasets](#link)
+   [Download Temple University Datasets](https://github.com/ycq091044/BIOT/tree/main/datasets)
 
 ## Setup
 

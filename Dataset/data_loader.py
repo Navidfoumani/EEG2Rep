@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 def load(config):
     # Build data
     Data = {}
-    data_path = config['data_dir'] + '/processed_data'
-    if os.path.exists(data_path + '/' + config['problem'] + '.npy'):
+    if os.path.exists(config['data_dir'] + '/' + config['problem'] + '.npy'):
         logger.info("Loading preprocessed data ...")
-        Data_npy = np.load(data_path + '/' + config['problem'] + '.npy', allow_pickle=True)
+        Data_npy = np.load(config['data_dir'] + '/' + config['problem'] + '.npy', allow_pickle=True)
+
         if np.any(Data_npy.item().get('val_data')):
             Data['train_data'] = Data_npy.item().get('train_data')
             Data['train_label'] = Data_npy.item().get('train_label')
@@ -37,19 +37,6 @@ def load(config):
             Data['test_data'] = Data_npy.item().get('test_data')
             Data['test_label'] = Data_npy.item().get('test_label')
             Data['max_len'] = Data['train_data'].shape[2]
-    else:
-        data_path = config['data_dir'] + '/processed_data/' + config['problem'] + '_X.npy'
-        if os.path.exists(data_path):
-            logger.info("Loading preprocessed data ...")
-            Data_npy = np.load(data_path, allow_pickle=True)  # (#Samples, #Channel, #Lenght)
-            Label_npy = np.load(config['data_dir'] + '/processed_data/' + config['problem'] + '_y.npy')
-            Meta_data = np.load(config['data_dir'] + '/processed_data/' + config['problem'] + '_metadata.npy', allow_pickle=True)
-            test_index = np.loadtxt(config['data_dir'] + '/processed_data/test_indices_fold_1.txt', dtype=int)
-            Data = split_data(Data_npy, Label_npy, Meta_data, test_index)
-            np.save(config['data_dir'] + '/processed_data/' + config['problem'], Data, allow_pickle=True)
-        else:
-            logger.info("Please use the instruction to build the numpy data")
-
     logger.info("{} samples will be used for self-supervised training".format(len(Data['All_train_label'])))
     logger.info("{} samples will be used for fine tuning ".format(len(Data['train_label'])))
     samples, channels, time_steps = Data['train_data'].shape
@@ -61,68 +48,18 @@ def load(config):
     return Data
 
 
-def split_data(Data_npy, Label_npy, Meta_data, test_index):
-    # Create a boolean array indicating the samples designated for the test set
-    test_bool_index = np.zeros(len(Label_npy), dtype=bool)
-    test_bool_index[test_index] = True
-
-    Data = {'test_data': Data_npy[test_index], 'test_label': Label_npy[test_index],
-            'All_train_data': Data_npy[~test_bool_index], 'All_train_label': Label_npy[~test_bool_index]}
-
-    if 'subject_id' in Meta_data.item():
-        Data['train_data'], Data['train_label'], Data['val_data'], Data['val_label'] = (
-            subject_wise_split(Data_npy, Label_npy, Meta_data, test_index))
-    else:
-        Data['train_data'], Data['train_label'], Data['val_data'], Data['val_label'] = (
-            non_subject_wise_split(Data['All_train_data'], Data['All_train_label']))
-    return Data
-
-
-def non_subject_wise_split(data, label):
-    splitter = model_selection.StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=1234)
-    train_indices, val_indices = zip(*splitter.split(X=np.zeros(len(label)), y=label))
-    train_data = data[train_indices]
-    train_label = label[train_indices]
-    val_data = data[val_indices]
-    val_label = label[val_indices]
-
-    return train_data, train_label, val_data, val_label
-
-
-def subject_wise_split(data, label, Meta_data, test_index):
-    subject_id = Meta_data.item().get('subject_id')
-    test_subject = np.unique(subject_id[test_index])
-    train_subject = np.setdiff1d(np.unique(subject_id), np.unique(subject_id[test_index]))
-    # Randomly select subject IDs for validation
-    train_subjects, val_subjects = model_selection.train_test_split(train_subject,
-                                                                    test_size=np.floor(len(test_subject)/2).astype(int),
-                                                                    random_state=42)
-    train_data = data[np.isin(subject_id, train_subjects)]
-    train_label = label[np.isin(subject_id, train_subjects)]
-    val_data = data[np.isin(subject_id, val_subjects)]
-    val_label = label[np.isin(subject_id, val_subjects)]
-
-    return train_data, train_label, val_data, val_label
-
-
 def Cross_Domain_loader(domain_data):
     All_train_data = domain_data.item().get('All_train_data')
     All_train_label = domain_data.item().get('All_train_label')
-    DREAMER = np.load('Dataset/DREAMER/DREAMER/DREAMER.npy', allow_pickle=True)
+    # Load DREAMER for Pre-Training
+    DREAMER = np.load('Dataset/DREAMER/DREAMER.npy', allow_pickle=True)
     All_train_data = np.concatenate((All_train_data, DREAMER.item().get('All_train_data')), axis=0)
     All_train_label = np.concatenate((All_train_label, DREAMER.item().get('All_train_label')), axis=0)
-    DriverDistraction = np.load('Dataset/DriverDistraction/DriverDistraction/DriverDistraction.npy', allow_pickle=True)
-    All_train_data = np.concatenate((All_train_data, DriverDistraction.item().get('All_train_data')), axis=0)
-    All_train_label = np.concatenate((All_train_label, DriverDistraction.item().get('All_train_label')), axis=0)
-    # Load DREAMER for Pre-Training
-    '''
-    Crowdsource = np.load('Dataset/Crowdsource/Crowdsource/Crowdsource.npy', allow_pickle=True)
+
+    # Load Crowdsource for Pre-Training
+    Crowdsource = np.load('Dataset/Crowdsource/Crowdsource.npy', allow_pickle=True)
     All_train_data = np.concatenate((All_train_data, Crowdsource.item().get('All_train_data')), axis=0)
     All_train_label = np.concatenate((All_train_label, Crowdsource.item().get('All_train_label')), axis=0)
-    All_train_data = np.concatenate((All_train_data, Crowdsource.item().get('test_data')), axis=0)
-    All_train_label = np.concatenate((All_train_label, Crowdsource.item().get('test_label')), axis=0)
-
-    '''
     return All_train_data, All_train_label
 
 def tuev_loader(config):

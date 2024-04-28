@@ -97,7 +97,6 @@ class dataset_class(Dataset):
             self.feature = np.concatenate([self.feature, padding], axis=-1)
 
     def __getitem__(self, ind):
-
         x = self.feature[ind]
         x = x.astype(np.float32)
         y = self.labels[ind]  # (num_labels,) array
@@ -120,7 +119,6 @@ def print_title(text):
 
 
 def convert_frequency(config, Data):
-
     problem = config['data_dir'].split('/')[-1]
     Data['All_train_data'] = get_fft(Data['All_train_data'])
     Data['train_data'] = get_fft(Data['train_data'])

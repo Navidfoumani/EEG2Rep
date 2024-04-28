@@ -18,9 +18,11 @@ logger = logging.getLogger('__main__')
 
 def Rep_Learning(config, Data):
     # ---------------------------------------- Self Supervised Data -------------------------------------
-    pre_train_dataset = dataset_class(Data['All_train_data'], Data['All_train_label'], config['patch_size'])
+    if config['Pre_Training'] =='Cross-domain':
+        pre_train_dataset = dataset_class(Data['pre_train_data'], Data['pre_train_label'], config['patch_size'])
+    else:
+        pre_train_dataset = dataset_class(Data['All_train_data'], Data['All_train_label'], config['patch_size'])
     pre_train_loader = DataLoader(dataset=pre_train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
-
     train_dataset = dataset_class(Data['All_train_data'], Data['All_train_label'], config['patch_size'])
     train_loader = DataLoader(dataset=train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True)
     # For Linear Probing During the Pre-Training
@@ -37,12 +39,9 @@ def Rep_Learning(config, Data):
     # ---------------------------------------------- Model Initialization ----------------------------------------------
     # Specify which networks you want to optimize
     networks_to_optimize = [Encoder.contex_encoder, Encoder.InputEmbedding, Encoder.Predictor]
-    # networks_to_optimize = [Encoder.contex_encoder, Encoder.Predictor]
-    # networks_not_to_optimize = [Encoder.target_encoder, Encoder.PatchEmbedding]
     # Convert parameters to tensors
     params_to_optimize = [p for net in networks_to_optimize for p in net.parameters()]
     params_not_to_optimize = [p for p in Encoder.target_encoder.parameters()]
-    # params_not_to_optimize = [p for net in networks_not_to_optimize for p in net.parameters()]
 
     optim_class = get_optimizer("RAdam")
     config['optimizer'] = optim_class([{'params': params_to_optimize, 'lr': config['lr']},
@@ -52,7 +51,6 @@ def Rep_Learning(config, Data):
     config['loss_module'] = get_loss_module()
 
     save_path = os.path.join(config['save_dir'], config['problem'] +'model_{}.pth'.format('last'))
-    # tensorboard_writer = SummaryWriter('summary')
     Encoder.to(config['device'])
     # ------------------------------------------------- Training The Model ---------------------------------------------
     logger.info('Self-Supervised training...')
@@ -68,7 +66,7 @@ def Rep_Learning(config, Data):
 
     clf = fit_lr(train_repr.cpu().detach().numpy(), train_labels.cpu().detach().numpy())
     y_hat = clf.predict(test_repr.cpu().detach().numpy())
-    plot_tSNE(test_repr.cpu().detach().numpy(), test_labels.cpu().detach().numpy())
+    # plot_tSNE(test_repr.cpu().detach().numpy(), test_labels.cpu().detach().numpy())
     acc_test = accuracy_score(test_labels.cpu().detach().numpy(), y_hat)
     print('Test_acc:', acc_test)
     cm = confusion_matrix(test_labels.cpu().detach().numpy(), y_hat)

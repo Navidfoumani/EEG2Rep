@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def load(config):
     # Build data
     Data = {}
-    data_path = config['data_dir'] + '/' + config['problem']
+    data_path = config['data_dir'] + '/processed_data'
     if os.path.exists(data_path + '/' + config['problem'] + '.npy'):
         logger.info("Loading preprocessed data ...")
         Data_npy = np.load(data_path + '/' + config['problem'] + '.npy', allow_pickle=True)

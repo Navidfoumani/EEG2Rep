@@ -23,7 +23,7 @@ class EEG2Rep(nn.Module):
         channel_size, seq_len = config['Data_shape'][1], config['Data_shape'][2]
         emb_size = config['emb_size']  # d_x
         # Embedding Layer -----------------------------------------------------------
-        config['pooling_size'] = 5  # Max pooling size in input embedding
+        config['pooling_size'] = 2  # Max pooling size in input embedding
         seq_len = int(seq_len / config['pooling_size'])  # Number of patches (l)
         self.InputEmbedding = InputEmbedding(config)  # input (Batch,Channel, length) -> output (Batch, l, d_x)
         self.PositionalEncoding = PositionalEmbedding(seq_len, emb_size)
@@ -37,6 +37,8 @@ class EEG2Rep(nn.Module):
         self.target_encoder = copy.deepcopy(self.contex_encoder)
         self.Predictor = Predictor(emb_size, config['num_heads'], config['dim_ff'], 1, config['pre_layers'])
         self.predict_head = nn.Linear(emb_size, config['num_labels'])
+        self.Norm = nn.LayerNorm(emb_size)
+        self.Norm2 = nn.LayerNorm(emb_size)
         self.gap = nn.AdaptiveAvgPool1d(1)
 
     def copy_weight(self):
@@ -52,7 +54,9 @@ class EEG2Rep(nn.Module):
     def linear_prob(self, x):
         with (torch.no_grad()):
             patches = self.InputEmbedding(x)
-            # patches += self.PositionalEncoding(patches)
+            patches = self.Norm(patches)
+            patches = patches + self.PositionalEncoding(patches)
+            patches = self.Norm2(patches)
             out = self.contex_encoder(patches)
             out = out.transpose(2, 1)
             out = self.gap(out)
@@ -60,10 +64,12 @@ class EEG2Rep(nn.Module):
 
     def pretrain_forward(self, x):
         patches = self.InputEmbedding(x)  # (Batch, l, d_x)
-        # patches += self.PositionalEncoding(patches)
+        patches = self.Norm(patches)
+        patches = patches + self.PositionalEncoding(patches)
+        patches = self.Norm2(patches)
 
         rep_mask_token = self.mask_token.repeat(patches.shape[0], patches.shape[1], 1)
-        rep_mask_token = + self.PositionalEncoding(rep_mask_token)
+        rep_mask_token = rep_mask_token + self.PositionalEncoding(rep_mask_token)
 
         index = np.arange(patches.shape[1])
         index_chunk = Semantic_Subsequence_Preserving(index, 2, self.mask_ratio)
@@ -81,7 +87,9 @@ class EEG2Rep(nn.Module):
 
     def forward(self, x):
         patches = self.InputEmbedding(x)
-        patches += self.PositionalEncoding(patches)
+        patches = self.Norm(patches)
+        patches = patches + self.PositionalEncoding(patches)
+        patches = self.Norm2(patches)
         out = self.contex_encoder(patches)
         return self.predict_head(torch.mean(out, dim=1))
 
@@ -91,7 +99,7 @@ class InputEmbedding(nn.Module):
         super().__init__()
         channel_size, seq_len = config['Data_shape'][1], config['Data_shape'][2]
         emb_size = config['emb_size']  # d_x (input embedding dimension)
-        k = 40
+        k = 7
         # Embedding Layer -----------------------------------------------------------
         self.depthwise_conv = nn.Conv2d(in_channels=1, out_channels=emb_size, kernel_size=(channel_size, 1))
         self.spatial_padding = nn.ReflectionPad2d((int(np.floor((k - 1) / 2)), int(np.ceil((k - 1) / 2)), 0, 0))

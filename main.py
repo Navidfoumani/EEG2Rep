@@ -23,8 +23,8 @@ parser.add_argument('--output_dir', default='Results',
 parser.add_argument('--print_interval', type=int, default=10, help='Print batch info every this many batches')
 # ----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------- Parameters and Hyperparameter ----------------------------------------------
-parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')
-parser.add_argument('--batch_size', type=int, default=256, help='Training batch size')
+parser.add_argument('--epochs', type=int, default=200, help='Number of training epochs')
+parser.add_argument('--batch_size', type=int, default=128, help='Training batch size')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--dropout', type=float, default=0.1, help='Dropout regularization ratio')
 parser.add_argument('--Norm', type=bool, default=False, help='Data Normalization')
@@ -44,8 +44,8 @@ parser.add_argument('--pre_layers', type=int, default=2, help="Number of layers 
 parser.add_argument('--mask_ratio', type=float, default=0.5, help=" masking ratio")
 parser.add_argument('--momentum', type=float, default=0.99, help="Beta coefficient for EMA update")
 
-parser.add_argument('--patch_size', type=int, default=16, help='size')
-parser.add_argument('--emb_size', type=int, default=64, help='Internal dimension of transformer embeddings')
+parser.add_argument('--patch_size', type=int, default=8, help='size')
+parser.add_argument('--emb_size', type=int, default=16, help='Internal dimension of transformer embeddings')
 parser.add_argument('--dim_ff', type=int, default=256, help='Dimension of feedforward network of transformer layer')
 parser.add_argument('--num_heads', type=int, default=8, help='Number of multi-headed attention heads')
 # ----------------------------------------------------------------------------------------------------------------------

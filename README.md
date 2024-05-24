@@ -1,5 +1,6 @@
 ## EEG2Rep: Enhancing Self-supervised EEG Representation Through Informative Masked Inputs
-### ✨ **News:** This work has been accepted for publication in [![KDD 2024](https://img.shields.io/badge/KDD-2024-ff69b4.svg)](https://kdd2024.kdd.org/)
+### ✨ **News:** This work has been accepted for publication in <span style="color:blue">**KDD24**</span>
+[![KDD 2024](https://img.shields.io/badge/KDD-2024-ff69b4.svg)](https://kdd2024.kdd.org/)
 
 
 #### Authors: [Navid Mohammadi Foumani](https://scholar.google.com.au/citations?user=Ax62P1MAAAAJ&hl=en), 

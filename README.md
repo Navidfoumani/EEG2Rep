@@ -6,6 +6,7 @@
 [Nam Nguyen](),
 [**Mahsa Salehi**](https://research.monash.edu/en/persons/mahsa-salehi)
 
+#### ✨ **News:** This work has been accepted for publication in [KDD24](https://kdd2024.kdd.org/)
 This work follows from the project with [**Emotiv Research**](https://www.emotiv.com/neuroscience-research-education-solutions/), a bioinformatics research company based in Australia, and [**Emotiv**](https://www.emotiv.com/), 
 a global technology company specializing in the development and manufacturing of wearable EEG products.
 

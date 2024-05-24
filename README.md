@@ -1,4 +1,6 @@
 ## EEG2Rep: Enhancing Self-supervised EEG Representation Through Informative Masked Inputs
+### ✨ **News:** This work has been accepted for publication in [KDD24](https://kdd2024.kdd.org/)
+
 #### Authors: [Navid Mohammadi Foumani](https://scholar.google.com.au/citations?user=Ax62P1MAAAAJ&hl=en), 
 [Geoffrey Mackellar](https://www.linkedin.com/in/geoffmackellar/?originalSubdomain=au), 
 [Soheila Ghane](https://www.linkedin.com/in/soheila-ghane/?originalSubdomain=au), 
@@ -6,7 +8,6 @@
 [Nam Nguyen](),
 [**Mahsa Salehi**](https://research.monash.edu/en/persons/mahsa-salehi)
 
-#### ✨ **News:** This work has been accepted for publication in [KDD24](https://kdd2024.kdd.org/)
 This work follows from the project with [**Emotiv Research**](https://www.emotiv.com/neuroscience-research-education-solutions/), a bioinformatics research company based in Australia, and [**Emotiv**](https://www.emotiv.com/), 
 a global technology company specializing in the development and manufacturing of wearable EEG products.
 

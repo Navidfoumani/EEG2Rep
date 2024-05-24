@@ -16,7 +16,8 @@ parser.add_argument('--gpu', type=int, default='0', help='GPU index, -1 for CPU'
 parser.add_argument('--console', action='store_true', help="Optimize printout for console output; otherwise for file")
 parser.add_argument('--seed', default=1234, type=int, help='Seed used for splitting sets')
 # --------------------------------------------------- I/O --------------------------------------------------------------
-parser.add_argument('--data_dir', default='Dataset/Crowdsource', help='Data directory')
+parser.add_argument('--data_dir', default='Dataset/Crowdsource', choices={'Dataset/Crowdsource', 'Dataset/DREAMER',
+                                                                          'Dataset/STEW'}, help='Data directory')
 parser.add_argument('--output_dir', default='Results',
                     help='Root output directory. Time-stamped directories will be created inside.')
 parser.add_argument('--print_interval', type=int, default=10, help='Print batch info every this many batches')

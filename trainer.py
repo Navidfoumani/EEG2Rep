@@ -257,8 +257,8 @@ def SS_train_runner(config, model, trainer, path):
             print_str += '{}: {:8f} | '.format(k, v)
         logger.info(print_str)
         # plot_loss(Total_loss,Time_loss,Freq_loss)
-        # if epoch > 50 or epochs < 50:
-        save_best_model(aggr_metrics_train['loss'], epoch, model, optimizer, loss_module, path)
+        if epoch > 50 or epochs < 50:
+            save_best_model(aggr_metrics_train['loss'], epoch, model, optimizer, loss_module, path)
     total_runtime = time.time() - total_start_time
     logger.info("Train Time: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(total_runtime)))
     return

@@ -1,4 +1,4 @@
-## Test EEG2Rep: Enhancing Self-supervised EEG Representation Through Informative Masked Inputs
+## EEG2Rep: Enhancing Self-supervised EEG Representation Through Informative Masked Inputs
 ### ✨ **News:** This work has been accepted for publication in <span style="color:red;">**KDD24**</span>
 [![KDD 2024](https://img.shields.io/badge/KDD-2024-ff69b4.svg)](https://kdd2024.kdd.org/)
 

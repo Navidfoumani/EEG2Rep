@@ -13,8 +13,7 @@
 This work follows from the project with [**Emotiv Research**](https://www.emotiv.com/neuroscience-research-education-solutions/), a bioinformatics research company based in Australia, and [**Emotiv**](https://www.emotiv.com/), 
 a global technology company specializing in the development and manufacturing of wearable EEG products.
 
-
-#### EEG2Rep Paper: [PDF](https://arxiv.org/pdf/2402.17772.pdf)
+#### EEG2Rep Paper: [PDF](https://dl.acm.org/doi/pdf/10.1145/3637528.3671600)
 
 This is a PyTorch implementation of **EEG2Rep: Enhancing Self-supervised EEG Representation Through Informative Masked Inputs**
 <p align="center">

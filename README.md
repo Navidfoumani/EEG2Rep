@@ -57,10 +57,11 @@ If you find **EEG2Rep** useful for your research, please consider citing this pa
 
 ````
 ```
-@article{foumani2024eeg2rep,
-  title={EEG2Rep: Enhancing Self-supervised EEG Representation Through Informative Masked Inputs},
-  author={Foumani, Navid Mohammadi and Mackellar, Geoffrey and Ghane, Soheila and Irtza, Saad and Nguyen, Nam and Salehi, Mahsa},
-  journal={arXiv preprint arXiv:2402.17772},
+@inproceedings{eeg2rep2024,
+  title={Eeg2rep: enhancing self-supervised EEG representation through informative masked inputs},
+  author={Mohammadi Foumani, Navid and Mackellar, Geoffrey and Ghane, Soheila and Irtza, Saad and Nguyen, Nam and Salehi, Mahsa},
+  booktitle={Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining},
+  pages={5544--5555},
   year={2024}
 }
 

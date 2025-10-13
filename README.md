@@ -32,6 +32,12 @@ This is a PyTorch implementation of **EEG2Rep: Enhancing Self-supervised EEG Rep
 
    [Download Temple University Datasets](https://github.com/ycq091044/BIOT/tree/main/datasets)
 
+*(Note: You’ll need to register before accessing the data.)*
+
+After downloading the raw files, use the provided Python scripts in the `dataset` directory to process and convert them into the NumPy format used in this project. First, run `TUEV.py` and `TUAB.py` to extract the data, and then execute `numpy_maker.py` to generate the final NumPy-formatted datasets.
+
+   
+
 ## Setup
 
 _Instructions refer to Unix-based systems (e.g. Linux, MacOS)._
